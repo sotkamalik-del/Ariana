@@ -4,9 +4,13 @@ name: Build Ariadna EXE
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: windows-latest
+
     steps:
       - uses: actions/checkout@v4
 
@@ -15,21 +19,27 @@ jobs:
           node-version: 20
 
       - name: Extract project
-        run: Expand-Archive -Path Ariadna-GitHub-EXE.zip -DestinationPath project
+        shell: pwsh
+        run: |
+          Expand-Archive -LiteralPath Ariadna-GitHub-EXE.zip -DestinationPath unpacked
+          Copy-Item unpacked/desktop desktop -Recurse
+          Copy-Item unpacked/src src -Recurse
 
-      - name: Prepare application
-        run: Copy-Item project/src/index.html project/desktop/index.html
+      - name: Prepare app
+        run: Copy-Item src/index.html desktop/index.html -Force
+        shell: pwsh
 
       - name: Install dependencies
-        working-directory: project/desktop
+        working-directory: desktop
         run: npm install
 
-      - name: Build EXE
-        working-directory: project/desktop
-        run: npx electron-builder --win portable
+      - name: Build Windows EXE
+        working-directory: desktop
+        run: npx electron-builder --win portable --x64
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload EXE
+        uses: actions/upload-artifact@v4
         with:
           name: Ariadna-Windows-EXE
-          path: project/desktop/dist/Ariadna.exe
+          path: desktop/dist/Ariadna.exe
           
